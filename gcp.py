@@ -23,10 +23,10 @@ from torchmetrics import MeanAbsoluteError as MAE
 from torchmetrics import MeanMetric, MinMetric
 from torchvision import transforms
 
-from src.models import architectures
-from src.models.face_age_module import FaceAgeModule
-from src.utils.functions import inference_picture
-from src.utils.predict import Predict
+# from src.models import architectures
+# from src.models.face_age_module import FaceAgeModule
+# from src.utils.functions import inference_picture
+# from src.utils.predict import Predict
 
 ## Gloabl model variable
 model = None
@@ -58,11 +58,14 @@ class FaceAgeModule(pl.LightningModule):
 
         # architecture
         if net == "SimpleConvNet_100x100":
-            self.net = architectures.SimpleConvNet_100x100()
+            # self.net = architectures.SimpleConvNet_100x100()
+            pass
         elif net == "SimpleConvNet_224x224":
-            self.net = architectures.SimpleConvNet_224x224()
+            # self.net = architectures.SimpleConvNet_224x224()
+            pass
         elif net == "EffNet_224x224":
-            self.net = architectures.PretrainedEfficientNet()
+            # self.net = architectures.PretrainedEfficientNet()
+            pass
         else:
             raise ValueError(f"Unknown net: {net}")
 
@@ -191,18 +194,18 @@ class FaceAgeModule(pl.LightningModule):
         return torch.optim.Adam(self.parameters(), lr=0.01)
 
 
-class Predict:
+class Predict():
     """
     This class is used for loading the trained face age model and making predictions on a given image.
     """
 
-    def __init__(self):
+    def __init__(self, model_pth):
         """
         Initializes the Predict class by loading the trained model, setting it to evaluation mode, and freezing its parameters.
         Also creates the image preprocessing pipeline using the torchvision library.
         """
 
-        ckpt_path = Path("models/best-checkpoint.ckpt")
+        ckpt_path = Path(model_pth)
         assert ckpt_path.exists(), f"Model checkpoint not found at: '{ckpt_path}'"
 
         self.model = FaceAgeModule.load_from_checkpoint(
@@ -339,7 +342,7 @@ def inference_picture(
     return image, ages
 
 
-def predict(file):
+def predict(file, model_pth):
     mp_face_detection = mp.solutions.face_detection
     mp_drawing = mp.solutions.drawing_utils
 
@@ -349,7 +352,7 @@ def predict(file):
     with mp_face_detection.FaceDetection(
         model_selection=0, min_detection_confidence=0.5
     ) as face_detection:
-        model = Predict()
+        model = Predict(model_pth)
 
         import numpy as np
 
@@ -369,12 +372,11 @@ def predict(file):
         # output_path = os.path.join(output_folder, file.replace("_input", "_response"))
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         # cv2.imwrite(output_path, image)
-        return image, ages
+        return ages
 
 
 # GCP related
 def download_model_file():
-    from google.cloud import storage
 
     # Model Bucket details
     BUCKET_NAME = "web-app-model"
@@ -400,7 +402,6 @@ def download_model_file():
 
 
 def download_input_file(file):
-    from google.cloud import storage
 
     # Model Bucket details
     BUCKET_NAME = "web-app-uploads"
@@ -429,14 +430,14 @@ def main(request):
     global model
 
     if not model:
-        download_model_file()
+        model_pth = download_model_file()
 
     # Get the features sent for prediction
     params = request.get_json()
 
-    if (params is not None) and ("features" in params):
+    if (params is not None) and ("file" in params):
         # Run a test prediction
-        pred_species = model.predict(np.array([params["features"]]))
+        predict(params["file"], model_pth)
         return "Complete"
 
     else:
