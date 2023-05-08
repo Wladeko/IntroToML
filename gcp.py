@@ -1,6 +1,6 @@
 import os
 
-import cv2
+# import cv2
 import mediapipe as mp
 import pyrootutils
 from PIL import Image
@@ -12,7 +12,6 @@ root = pyrootutils.setup_root(
 from pathlib import Path
 from typing import Any, List
 
-import cv2
 import pytorch_lightning as pl
 import requests
 import torch
@@ -326,16 +325,16 @@ def inference_picture(
                 ages.append(prediction)
 
                 # Add the age inference to the image
-                image = cv2.putText(
-                    image,
-                    f"Age: {int(prediction)}",
-                    (rect_start_point[0], rect_start_point[1] - 10),
-                    cv2.FONT_HERSHEY_SIMPLEX,
-                    0.5,
-                    (255, 255, 255),
-                    2,
-                    cv2.LINE_AA,
-                )
+                # image = cv2.putText(
+                #     image,
+                #     f"Age: {int(prediction)}",
+                #     (rect_start_point[0], rect_start_point[1] - 10),
+                #     cv2.FONT_HERSHEY_SIMPLEX,
+                #     0.5,
+                #     (255, 255, 255),
+                #     2,
+                #     cv2.LINE_AA,
+                # )
 
             # Draw the detection on the image
             mp_drawing.draw_detection(image, detection)
@@ -370,8 +369,8 @@ def predict(file, model_pth):
         )
 
         output_path = os.path.join(output_folder, file.replace("_input", "_response"))
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        cv2.imwrite(output_path, image)
+        # image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        # cv2.imwrite(output_path, image)
         return ages
 
 
@@ -454,9 +453,9 @@ def main(request):
     if (params is not None) and ("file" in params):
         # Run a test prediction
         file = params["file"]
-        predict(file, model_pth)
-        upload_prediction(file)
-        return "Complete"
+        ages = predict(file, model_pth)
+        # upload_prediction(file)
+        return f"Complete prediction: {ages}"
 
     else:
         return "Nothing sent for prediction"
