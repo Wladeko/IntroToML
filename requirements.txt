@@ -13,15 +13,13 @@ ipykernel
 
 # face detection
 mediapipe
-opencv-python
+opencv-python-headless
 Pillow
-
-# app
-streamlit
-streamlit-lottie
 
 # root setup
 pyrootutils
 
-# logging
-wandb
+# gcp
+google-resumable-media
+google-cloud-storage
+google-cloud-bigquery

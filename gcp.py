@@ -194,7 +194,7 @@ class FaceAgeModule(pl.LightningModule):
         return torch.optim.Adam(self.parameters(), lr=0.01)
 
 
-class Predict():
+class Predict:
     """
     This class is used for loading the trained face age model and making predictions on a given image.
     """
@@ -346,7 +346,7 @@ def predict(file, model_pth):
     mp_face_detection = mp.solutions.face_detection
     mp_drawing = mp.solutions.drawing_utils
 
-    # output_folder = "combined_images"
+    output_folder = "/tmp/"
     # os.makedirs(output_folder, exist_ok=True)
 
     with mp_face_detection.FaceDetection(
@@ -369,15 +369,14 @@ def predict(file, model_pth):
             SIZE=0.1,
         )
 
-        # output_path = os.path.join(output_folder, file.replace("_input", "_response"))
+        output_path = os.path.join(output_folder, file.replace("_input", "_response"))
         image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        # cv2.imwrite(output_path, image)
+        cv2.imwrite(output_path, image)
         return ages
 
 
 # GCP related
 def download_model_file():
-
     # Model Bucket details
     BUCKET_NAME = "web-app-model"
     PROJECT_ID = "alien-striker-386011"
@@ -402,7 +401,6 @@ def download_model_file():
 
 
 def download_input_file(file):
-
     # Model Bucket details
     BUCKET_NAME = "web-app-uploads"
     PROJECT_ID = "alien-striker-386011"
@@ -424,6 +422,21 @@ def download_input_file(file):
     blob.download_to_filename(folder + input)
 
 
+def upload_prediction(file):
+    # Model Bucket details
+    BUCKET_NAME = "web-app-uploads"
+    PROJECT_ID = "alien-striker-386011"
+    pth = file.replace("_input", "_response")
+    GCS_INPUT_FILE = pth
+
+    content_type = "image/jpeg"
+
+    blob = storage.Client(PROJECT_ID).bucket(BUCKET_NAME).blob(GCS_INPUT_FILE)
+    blob.upload_from_file("/tmp/image.jpg", content_type=content_type)
+
+    return "Image uploaded successfully"
+
+
 # Main entry point for the cloud function
 def main(request):
     # Use the global model variable
@@ -432,12 +445,17 @@ def main(request):
     if not model:
         model_pth = download_model_file()
 
+    if not model_pth:
+        model_pth = "/tmp/best-checkpoint.ckpt"
+
     # Get the features sent for prediction
     params = request.get_json()
 
     if (params is not None) and ("file" in params):
         # Run a test prediction
-        predict(params["file"], model_pth)
+        file = params["file"]
+        predict(file, model_pth)
+        upload_prediction(file)
         return "Complete"
 
     else:
