@@ -1,4 +1,5 @@
 from torchvision import transforms
+import torch
 
 from src.models.face_age_module import FaceAgeModule
 
@@ -19,7 +20,7 @@ class Predict:
         ckpt_path = Path("models/best-checkpoint.ckpt")
         assert ckpt_path.exists(), f"Model checkpoint not found at: '{ckpt_path}'"
 
-        self.model = FaceAgeModule.load_from_checkpoint(ckpt_path)
+        self.model = FaceAgeModule.load_from_checkpoint(ckpt_path, map_location=torch.device('cpu'))
         self.model.eval()
         self.model.freeze()
         transform_list = [
