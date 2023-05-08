@@ -1,5 +1,4 @@
 import os
-
 import cv2
 import mediapipe as mp
 import pyrootutils
@@ -38,8 +37,7 @@ with mp_face_detection.FaceDetection(model_selection=0, min_detection_confidence
         SIZE=0.1,
     )
 
-    output_path = os.path.join(output_folder, f"image_{i}.png")
+    output_path = os.path.join(output_folder, f"image_response.png")
     image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
     cv2.imwrite(output_path, image)
 
-    st.success("Done! Images are saved in the folder 'combined_images'.")
