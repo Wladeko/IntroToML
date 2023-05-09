@@ -1,13 +1,9 @@
 import os
 
-# import cv2
+import cv2
 import mediapipe as mp
-import pyrootutils
+import argparse
 from PIL import Image
-
-root = pyrootutils.setup_root(
-    __file__, indicator=".project-root", pythonpath=True, cwd=False
-)
 
 from pathlib import Path
 from typing import Any, List
@@ -204,14 +200,15 @@ class Predict:
         Also creates the image preprocessing pipeline using the torchvision library.
         """
 
-        ckpt_path = Path(model_pth)
-        assert ckpt_path.exists(), f"Model checkpoint not found at: '{ckpt_path}'"
+        # ckpt_path = Path(model_pth)
+        # assert ckpt_path.exists(), f"Model checkpoint not found at: '{ckpt_path}'"
 
-        self.model = FaceAgeModule.load_from_checkpoint(
-            ckpt_path, map_location=torch.device("cpu")
-        )
-        self.model.eval()
-        self.model.freeze()
+        # self.model = FaceAgeModule.load_from_checkpoint(
+        #     ckpt_path, map_location=torch.device("cpu")
+        # )
+        # self.model.eval()
+        # self.model.freeze()
+        self.model = torch.load(model_pth)
         transform_list = [
             transforms.ToTensor(),
             transforms.Resize((100, 100)),
@@ -325,16 +322,16 @@ def inference_picture(
                 ages.append(prediction)
 
                 # Add the age inference to the image
-                # image = cv2.putText(
-                #     image,
-                #     f"Age: {int(prediction)}",
-                #     (rect_start_point[0], rect_start_point[1] - 10),
-                #     cv2.FONT_HERSHEY_SIMPLEX,
-                #     0.5,
-                #     (255, 255, 255),
-                #     2,
-                #     cv2.LINE_AA,
-                # )
+                image = cv2.putText(
+                    image,
+                    f"Age: {int(prediction)}",
+                    (rect_start_point[0], rect_start_point[1] - 10),
+                    cv2.FONT_HERSHEY_SIMPLEX,
+                    0.5,
+                    (255, 255, 255),
+                    2,
+                    cv2.LINE_AA,
+                )
 
             # Draw the detection on the image
             mp_drawing.draw_detection(image, detection)
@@ -346,7 +343,8 @@ def predict(file, model_pth):
     mp_drawing = mp.solutions.drawing_utils
 
     output_folder = "/tmp/"
-    # os.makedirs(output_folder, exist_ok=True)
+    input_folder = "/tmp/"
+    os.makedirs(output_folder, exist_ok=True)
 
     with mp_face_detection.FaceDetection(
         model_selection=0, min_detection_confidence=0.5
@@ -355,7 +353,7 @@ def predict(file, model_pth):
 
         import numpy as np
 
-        image = Image.open(file)
+        image = Image.open(input_folder + file)
 
         image = np.array(image)
 
@@ -369,9 +367,9 @@ def predict(file, model_pth):
         )
 
         output_path = os.path.join(output_folder, file.replace("_input", "_response"))
-        # image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
-        # cv2.imwrite(output_path, image)
-        return ages
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
+        cv2.imwrite(output_path, image)
+        return ages, image
 
 
 # GCP related
@@ -379,7 +377,7 @@ def download_model_file():
     # Model Bucket details
     BUCKET_NAME = "web-app-model"
     PROJECT_ID = "alien-striker-386011"
-    GCS_MODEL_FILE = "best-checkpoint.ckpt"
+    GCS_MODEL_FILE = "model.pth"
 
     # Initialise a client
     client = storage.Client(PROJECT_ID)
@@ -394,9 +392,9 @@ def download_model_file():
     if not os.path.exists(folder):
         os.makedirs(folder)
     # Download the file to a destination
-    blob.download_to_filename(folder + "best-checkpoint.ckpt")
+    blob.download_to_filename(folder + "model.pth")
 
-    return folder + "best-checkpoint.ckpt"
+    return folder + "model.pth"
 
 
 def download_input_file(file):
@@ -418,7 +416,7 @@ def download_input_file(file):
     if not os.path.exists(folder):
         os.makedirs(folder)
     # Download the file to a destination
-    blob.download_to_filename(folder + input)
+    blob.download_to_filename(folder + file)
 
 
 def upload_prediction(file):
@@ -431,31 +429,53 @@ def upload_prediction(file):
     content_type = "image/jpeg"
 
     blob = storage.Client(PROJECT_ID).bucket(BUCKET_NAME).blob(GCS_INPUT_FILE)
-    blob.upload_from_file("/tmp/image.jpg", content_type=content_type)
+    blob.upload_from_filename("/tmp/" + pth, content_type=content_type)
 
     return "Image uploaded successfully"
 
 
+def delete_local(file):
+    pth = "/tmp/"
+    if os.path.isfile(pth + file):
+        os.remove(pth + file)
+        print(f"{file} deleted")
+    else:
+        print(f"There is no file {file}")
+
+    file = file.replace("_input", "_response")
+    if os.path.isfile(pth + file):
+        os.remove(pth + file)
+        print(f"{file} deleted")
+    else:
+        print(f"There is no file {file}")
+
+
+
 # Main entry point for the cloud function
-def main(request):
+def main(file):
     # Use the global model variable
     global model
+    model_pth = None
 
     if not model:
         model_pth = download_model_file()
 
     if not model_pth:
-        model_pth = "/tmp/best-checkpoint.ckpt"
+        model_pth = "/tmp/model.pth"
 
     # Get the features sent for prediction
-    params = request.get_json()
 
-    if (params is not None) and ("file" in params):
-        # Run a test prediction
-        file = params["file"]
-        ages = predict(file, model_pth)
-        # upload_prediction(file)
-        return f"Complete prediction: {ages}"
+    # Run a prediction
+    download_input_file(file)
+    ages = predict(file, model_pth)
+    upload_prediction(file)
+    delete_local(file)
+    return f"Complete prediction: {ages}"
 
-    else:
-        return "Nothing sent for prediction"
+
+parser = argparse.ArgumentParser(description="Just an example",
+                                 formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+parser.add_argument("-i", "--input", help="Input location")
+args = parser.parse_args()
+config = vars(args)
+main(file=config["input"])
