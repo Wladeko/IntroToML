@@ -1,6 +1,23 @@
-# IntroToML
+# Face Detection and Age Prediction using Machine Learning
 
-## Setup
+This repository contains code prepared as project for Introduction to Machine Learning course.
+
+---
+## Description
+In this project, we aim to tackle the task of estimating ages from facial images using deep
+learning models implemented in PyTorch. The potential applications of this technology are vast,
+ranging from security and healthcare to marketing. We also aim to develop web application with
+Streamlit, which allows users to test our model using either their computer camera or by uploading
+photos.
+
+---
+## Report
+Entire project is described and summarized in [this](https://github.com/Wladeko/intro-to-ml/blob/main/report.pdf) report.
+
+---
+## Brief Manual
+
+### Setup
 
 **Note**: The app doesn't work on Apple Silicon processors (M1, M2) due to build problems with `mediapipe` library.
 
@@ -15,7 +32,7 @@ conda activate faceage
 pip install -r requirements.txt
 ```
 
-## Run webcam app
+### Run webcam app
 
 (you don't need to train anything to run the app because it uses saved model from `models/best-checkpoint.ckpt`)
 
@@ -23,7 +40,7 @@ pip install -r requirements.txt
 streamlit run src/app.py
 ```
 
-## Run training
+### Run training
 
 First download dataset from: <br>
 https://www.kaggle.com/datasets/jangedoo/utkface-new
@@ -49,6 +66,7 @@ The default architecture is custom CNN with img (input) size 100x100. 10 epochs 
 
 You can change the architecture and hyperparameters in `src/train.py` file.
 
+---
 ## Project structure
 
 ```
